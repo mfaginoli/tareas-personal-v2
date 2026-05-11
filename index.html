@@ -473,6 +473,14 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
     </div>
   </div>
   <div class="form-group">
+    <label class="form-label">Estado</label>
+    <div style="display:flex;gap:6px">
+      <button class="edit-caract-btn" id="est-pend" onclick="setEditEstado('Pendiente')" style="flex:1">⏳ Pendiente</button>
+      <button class="edit-caract-btn" id="est-proc" onclick="setEditEstado('En proceso')" style="flex:1">▶ En proceso</button>
+      <button class="edit-caract-btn" id="est-fin" onclick="setEditEstado('Finalizada')" style="flex:1">✓ Finalizada</button>
+    </div>
+  </div>
+  <div class="form-group">
     <label class="form-label">Derivar a</label>
     <select class="form-select" id="e-derivar">
       <option value="">Sin derivar</option>
@@ -518,6 +526,7 @@ let currentEstado = 'todas-e';
 let diaFiltro = null;
 let editId = null;
 let editCaract = 'Moderado';
+let editEstado = 'Pendiente';
 let tipoActual = 'tarea';
 let selectedCaract = 'Moderado';
 
@@ -946,6 +955,8 @@ window.openDrawer = function(id) {
   document.getElementById('e-hora').value = t.hora||'';
   document.getElementById('e-desc').value = t.descripcion||'';
   document.getElementById('e-derivar').value = t.derivado||'';
+  editEstado = t.estado||'Pendiente';
+  setEditEstado(editEstado);
   editCaract = t.caracter||'Moderado';
   updateEditCaractUI();
   document.getElementById('edit-overlay').classList.add('open');
@@ -969,16 +980,28 @@ function updateEditCaractUI() {
   });
 }
 
+window.setEditEstado = function(e) {
+  editEstado = e;
+  const styles = {Pendiente:'border-color:#64748b;background:#f8fafc;color:#64748b','En proceso':'border-color:#0891b2;background:#f0f9ff;color:#0891b2',Finalizada:'border-color:#16a34a;background:#f0fdf4;color:#16a34a'};
+  ['Pendiente','En proceso','Finalizada'].forEach(k=>{
+    const id = k==='Pendiente'?'est-pend':k==='En proceso'?'est-proc':'est-fin';
+    const el = document.getElementById(id);
+    if(el) el.style.cssText = k===e?styles[k]:'';
+  });
+};
+
 window.guardarEdicion = async function() {
   if(!editId) return;
   await updateDoc(doc(db,'tareas',editId), {
     titulo: document.getElementById('e-titulo').value,
     area: document.getElementById('e-area').value,
     caracter: editCaract,
+    estado: editEstado,
     fecha: document.getElementById('e-fecha').value,
     hora: document.getElementById('e-hora').value,
     descripcion: document.getElementById('e-desc').value,
     derivado: document.getElementById('e-derivar').value,
+    updatedAt: new Date().toISOString()
   });
   closeDrawer();
 };
