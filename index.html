@@ -244,6 +244,10 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
       <div class="nav-dot" style="background:#ec4899"></div>Personales
       <span class="nav-cnt" id="cnt-Personales">0</span>
     </div>
+    <div class="nav-item" onclick="goArea('Eventos',this)">
+      <div class="nav-dot" style="background:#f43f5e"></div>Eventos
+      <span class="nav-cnt" id="cnt-Eventos">0</span>
+    </div>
   </div>
   <div class="sidebar-footer"><span class="sync-dot"></span>Sincronizado</div>
 </aside>
@@ -252,7 +256,11 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
 <div class="main">
   <div class="topbar">
     <div class="page-title" id="page-title">Dashboard</div>
-    <button class="btn-new" onclick="openModal()">+ Nueva tarea</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn-new" id="btn-hoy-dash" onclick="verHoy()" style="background:rgba(255,255,255,0.1)">📅 Hoy</button>
+      <button class="btn-new" id="btn-gcal" onclick="conectarCalendar()" style="background:rgba(255,255,255,0.1)">📆 Calendar</button>
+      <button class="btn-new" onclick="openModal()">+ Nueva tarea</button>
+    </div>
   </div>
   <div class="content">
 
@@ -341,6 +349,48 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
   </div>
 </div>
 
+<!-- MODAL GOOGLE CALENDAR -->
+<div id="modal-gcal" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:60;display:none;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)document.getElementById('modal-gcal').style.display='none'">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:600;color:#0f172a">📆 Google Calendar</div>
+      <button onclick="document.getElementById('modal-gcal').style.display='none'" style="width:28px;height:28px;border-radius:6px;background:#f1f5f9;border:none;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div id="gcal-content">
+      <div style="font-size:13px;color:#475569;margin-bottom:16px">Conectá Google Calendar para sincronizar tus eventos automáticamente.</div>
+      <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">¿Qué se sincroniza?</div>
+        <div style="font-size:12px;color:#475569;display:flex;flex-direction:column;gap:6px">
+          <span>✓ Tareas del área <strong>Eventos</strong> con fecha y hora</span>
+          <span>✓ Muestras, Reuniones y Eventos</span>
+          <span>✓ Se crean en tu Google Calendar automáticamente</span>
+        </div>
+      </div>
+      <button onclick="iniciarOAuth()" style="width:100%;padding:11px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Conectar con Google
+      </button>
+      <div id="gcal-status" style="margin-top:12px;font-size:12px;color:#94a3b8;text-align:center"></div>
+    </div>
+    <div id="gcal-connected" style="display:none">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:32px;margin-bottom:8px">✅</div>
+        <div style="font-size:14px;font-weight:500;color:#059669">Calendar conectado</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px" id="gcal-user-email"></div>
+      </div>
+      <div style="background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#16a34a" id="gcal-sync-info">
+        Los nuevos eventos se sincronizarán automáticamente.
+      </div>
+      <button onclick="sincronizarAhora()" style="width:100%;padding:10px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:8px">
+        🔄 Sincronizar eventos ahora
+      </button>
+      <button onclick="desconectarCalendar()" style="width:100%;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#475569;font-size:13px;cursor:pointer;font-family:inherit">
+        Desconectar Calendar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NUEVA TAREA -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal">
@@ -359,14 +409,23 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Área *</label>
-        <select class="form-select" id="f-area">
+        <select class="form-select" id="f-area" onchange="onAreaChange(this.value)">
           <option value="">Seleccionar</option>
           <option>Adm. Consorcios</option>
           <option>Adm. Propiedades</option>
           <option>Alquileres</option>
           <option>Ventas</option>
           <option>Personales</option>
+          <option>Eventos</option>
         </select>
+        <div id="subarea-group" style="display:none;margin-top:8px">
+          <select class="form-select" id="f-subarea">
+            <option value="">Tipo de evento</option>
+            <option>Muestra</option>
+            <option>Reunión</option>
+            <option>Evento</option>
+          </select>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Fecha</label>
@@ -447,13 +506,22 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
   <div class="form-row">
     <div class="form-group">
       <label class="form-label">Área</label>
-      <select class="form-select" id="e-area">
+      <select class="form-select" id="e-area" onchange="onEditAreaChange(this.value)">
         <option>Adm. Consorcios</option>
         <option>Adm. Propiedades</option>
         <option>Alquileres</option>
         <option>Ventas</option>
         <option>Personales</option>
+        <option>Eventos</option>
       </select>
+      <div id="e-subarea-group" style="display:none;margin-top:8px">
+        <select class="form-select" id="e-subarea">
+          <option value="">Tipo de evento</option>
+          <option>Muestra</option>
+          <option>Reunión</option>
+          <option>Evento</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Fecha</label>
@@ -561,11 +629,155 @@ function updateCounts() {
   document.getElementById('cnt-en-proceso').textContent = tareas.filter(t=>t.estado==='En proceso').length;
   document.getElementById('cnt-vencidas').textContent = activas.filter(t=>t.fecha&&t.fecha<h).length;
   document.getElementById('cnt-finalizadas').textContent = tareas.filter(t=>t.estado==='Finalizada').length;
-  ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales'].forEach(a => {
+  ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales','Eventos'].forEach(a => {
     const el = document.getElementById('cnt-'+a);
     if(el) el.textContent = activas.filter(t=>t.area===a).length;
   });
 }
+
+window.onAreaChange = function(val) {
+  const g = document.getElementById('subarea-group');
+  if(g) g.style.display = val === 'Eventos' ? 'block' : 'none';
+  // Auto-set tipo to evento if Eventos selected
+  if(val === 'Eventos') setTipo('evento');
+};
+
+window.onEditAreaChange = function(val) {
+  const g = document.getElementById('e-subarea-group');
+  if(g) g.style.display = val === 'Eventos' ? 'block' : 'none';
+};
+
+window.verHoy = function() {
+  const h = new Date();
+  const yyyy = h.getFullYear();
+  const mm = String(h.getMonth()+1).padStart(2,'0');
+  const dd = String(h.getDate()).padStart(2,'0');
+  diaFiltro = yyyy+'-'+mm+'-'+dd;
+  const label = dd+'/'+mm+'/'+yyyy;
+  document.getElementById('dia-label').textContent = label;
+  document.getElementById('dia-label').classList.add('active');
+  goView('todas', document.getElementById('nav-todas'));
+};
+
+// GOOGLE CALENDAR INTEGRATION
+const GCAL_CLIENT_ID = 'TU_CLIENT_ID.apps.googleusercontent.com';
+const GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+let gcalToken = localStorage.getItem('gcal_token') || null;
+let gcalEmail = localStorage.getItem('gcal_email') || null;
+
+window.conectarCalendar = function() {
+  const modal = document.getElementById('modal-gcal');
+  modal.style.display = 'flex';
+  // Check if already connected
+  if(gcalToken) {
+    document.getElementById('gcal-content').style.display = 'none';
+    document.getElementById('gcal-connected').style.display = 'block';
+    const emailEl = document.getElementById('gcal-user-email');
+    if(emailEl && gcalEmail) emailEl.textContent = gcalEmail;
+  } else {
+    document.getElementById('gcal-content').style.display = 'block';
+    document.getElementById('gcal-connected').style.display = 'none';
+  }
+};
+
+window.iniciarOAuth = function() {
+  if(GCAL_CLIENT_ID === 'TU_CLIENT_ID.apps.googleusercontent.com') {
+    document.getElementById('gcal-status').innerHTML = 
+      '<span style="color:#dc2626">⚠️ Para activar Calendar necesitás configurar el Client ID de Google. <a href="#" onclick="mostrarInstrucciones()">Ver instrucciones</a></span>';
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: GCAL_CLIENT_ID,
+    redirect_uri: window.location.href.split('?')[0],
+    response_type: 'token',
+    scope: GCAL_SCOPES,
+    prompt: 'select_account'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+};
+
+window.mostrarInstrucciones = function() {
+  document.getElementById('gcal-status').innerHTML = `
+    <div style="text-align:left;font-size:11px;color:#475569;line-height:1.6">
+      <strong>Para activar Google Calendar:</strong><br>
+      1. Abrí <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br>
+      2. Creá un proyecto → APIs → Google Calendar API → Habilitar<br>
+      3. Credenciales → OAuth 2.0 → Tipo: App Web<br>
+      4. URI autorizado: <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">${window.location.href.split('?')[0]}</code><br>
+      5. Copiá el Client ID y reemplazá en el código
+    </div>`;
+};
+
+// Handle OAuth redirect
+(function() {
+  const hash = window.location.hash;
+  if(hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    if(token) {
+      gcalToken = token;
+      localStorage.setItem('gcal_token', token);
+      // Get user email
+      fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: 'Bearer ' + token }
+      }).then(r=>r.json()).then(u=>{
+        gcalEmail = u.email;
+        localStorage.setItem('gcal_email', u.email);
+        // Update button
+        const btn = document.getElementById('btn-gcal');
+        if(btn) btn.textContent = '📆 ' + u.email.split('@')[0];
+        window.location.hash = '';
+      });
+    }
+  }
+})();
+
+window.desconectarCalendar = function() {
+  gcalToken = null; gcalEmail = null;
+  localStorage.removeItem('gcal_token');
+  localStorage.removeItem('gcal_email');
+  const btn = document.getElementById('btn-gcal');
+  if(btn) btn.textContent = '📆 Calendar';
+  document.getElementById('gcal-content').style.display = 'block';
+  document.getElementById('gcal-connected').style.display = 'none';
+};
+
+async function crearEventoCalendar(tarea) {
+  if(!gcalToken || !tarea.fecha || !tarea.hora) return;
+  if(tarea.area !== 'Eventos') return;
+  const start = tarea.fecha + 'T' + tarea.hora + ':00';
+  const [h,m] = tarea.hora.split(':').map(Number);
+  const endH = String(h+1).padStart(2,'0');
+  const end = tarea.fecha + 'T' + endH + ':' + String(m).padStart(2,'0') + ':00';
+  const evento = {
+    summary: (tarea.subarea ? '['+tarea.subarea+'] ' : '') + tarea.titulo,
+    description: tarea.descripcion || '',
+    start: { dateTime: start, timeZone: 'America/Argentina/Cordoba' },
+    end: { dateTime: end, timeZone: 'America/Argentina/Cordoba' },
+    colorId: tarea.subarea === 'Muestra' ? '3' : tarea.subarea === 'Reunión' ? '7' : '11'
+  };
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer '+gcalToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(evento)
+    });
+    if(!res.ok && res.status === 401) { gcalToken = null; localStorage.removeItem('gcal_token'); }
+    return res.ok;
+  } catch(e) { console.error('Calendar error:', e); }
+}
+
+window.sincronizarAhora = async function() {
+  const info = document.getElementById('gcal-sync-info');
+  if(info) info.textContent = '⏳ Sincronizando...';
+  const eventos = tareas.filter(t => t.area === 'Eventos' && t.fecha && t.hora);
+  let ok = 0;
+  for(const t of eventos) {
+    const res = await crearEventoCalendar(t);
+    if(res) ok++;
+  }
+  if(info) info.textContent = ok > 0 ? '✓ '+ok+' evento'+(ok>1?'s':'')+' sincronizado'+(ok>1?'s':'') : 'Sin eventos con hora para sincronizar';
+};
 
 window.goView = function(view, el) {
   currentView = view;
@@ -664,7 +876,7 @@ function renderList() {
           <span>${t.area}</span>
           ${t.fecha?`<span>📅 ${fmt(t.fecha)}</span>`:''}
           ${t.hora?`<span>⏰ ${t.hora}</span>`:''}
-          ${t.derivado?`<span>👤 ${t.derivado}</span>`:''}
+          ${t.subarea?`<span>📌 ${t.subarea}</span>`:''}${t.derivado?`<span>👤 ${t.derivado}</span>`:''}
           ${t.estado==='En proceso'?`<span class="badge b-blue">En proceso</span>`:''}
         </div>
       </div>
@@ -722,7 +934,7 @@ function renderDashboard() {
     window._kmap[t.id] = t.id;
     return '<div class="k-card '+(done?'done':'')+'" data-id="'+t.id+'" style="cursor:pointer">'
       +'<div class="k-title '+(done?'done':'')+'">'+(done?'<s>':'')+t.titulo+(done?'</s>':'')+'</div>'
-      +'<div class="k-meta">'+meta+'</div>'
+      +'<div class="k-meta">'+meta+(t.subarea?' · '+t.subarea:'')+'</div>'
       +span
       +'</div>';
   };
@@ -746,14 +958,16 @@ function renderDashboard() {
   });
 
   // Por área
-  const areas = ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales'];
+  const areas = ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales','Eventos'];
+  const areaColors = {'Adm. Consorcios':'#8b5cf6','Adm. Propiedades':'#06b6d4','Alquileres':'#f59e0b','Ventas':'#10b981','Personales':'#ec4899','Eventos':'#f43f5e'};
   const maxA = Math.max(...areas.map(a=>activas.filter(t=>t.area===a).length),1);
   document.getElementById('d-areas').innerHTML = areas.map(a=>{
     const cnt = activas.filter(t=>t.area===a).length;
     const urg = activas.filter(t=>t.area===a&&t.caracter==='Urgente').length;
+    const color = areaColors[a]||'#378add';
     return `<div class="bar-row" onclick="goArea('${a}',null)">
       <div class="bar-labels"><span>${a}</span><span>${cnt}${urg>0?` <span style="color:#dc2626;font-size:10px">+${urg}urg</span>`:''}</span></div>
-      <div class="bar-track"><div class="bar-fill ${urg>0?'red':''}" style="width:${cnt?(cnt/maxA*100):0}%"></div></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${cnt?(cnt/maxA*100):0}%;background:${color}"></div></div>
     </div>`;
   }).join('');
 
@@ -884,10 +1098,14 @@ window.guardarTarea = async function() {
     descripcion: document.getElementById('f-desc').value.trim(),
     derivado: document.getElementById('f-derivar').value,
     recurrencia: document.getElementById('f-recurrente').value||'',
+    subarea: document.getElementById('f-subarea')?.value||'',
     estado: 'Pendiente', createdAt: new Date().toISOString()
   };
   try {
-    await addDoc(collection(db,'tareas'), tarea);
+    const docRef = await addDoc(collection(db,'tareas'), tarea);
+    if(tarea.area === 'Eventos' && tarea.hora && gcalToken) {
+      crearEventoCalendar({...tarea, id: docRef.id});
+    }
     const rec = document.getElementById('f-recurrente').value;
     const hasta = document.getElementById('f-hasta').value;
     if(rec && hasta && tarea.fecha) {
@@ -957,6 +1175,8 @@ window.openDrawer = function(id) {
   document.getElementById('e-derivar').value = t.derivado||'';
   editEstado = t.estado||'Pendiente';
   setEditEstado(editEstado);
+  onEditAreaChange(t.area||'');
+  const eSub = document.getElementById('e-subarea'); if(eSub) eSub.value = t.subarea||'';
   editCaract = t.caracter||'Moderado';
   updateEditCaractUI();
   document.getElementById('edit-overlay').classList.add('open');
@@ -1001,6 +1221,7 @@ window.guardarEdicion = async function() {
     hora: document.getElementById('e-hora').value,
     descripcion: document.getElementById('e-desc').value,
     derivado: document.getElementById('e-derivar').value,
+    subarea: document.getElementById('e-subarea')?.value||'',
     updatedAt: new Date().toISOString()
   });
   closeDrawer();
