@@ -520,15 +520,30 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Temas tratados</label>
-      <div class="acta-temas-form" id="acta-temas-form"></div>
-      <button class="btn-add-tema" onclick="addTemaForm()">+ Agregar tema</button>
+      <label class="form-label">Obras / Temas tratados</label>
+      <div id="acta-temas-form"></div>
+      <button class="btn-add-tema" onclick="addTemaForm()">+ Agregar obra / tema</button>
     </div>
     <div class="form-group">
       <label class="form-label">Notas generales</label>
       <textarea class="form-textarea" id="acta-notas" rows="3" placeholder="Observaciones, acuerdos generales, próximos pasos..."></textarea>
     </div>
     <button class="btn-primary" onclick="guardarActa()">Guardar acta</button>
+  </div>
+</div>
+
+<!-- MODAL AGREGAR CONSORCIO/PROPIEDAD -->
+<div style="position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:70;display:none;align-items:center;justify-content:center;padding:20px" id="modal-nuevo-lugar">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:380px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+    <div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      Agregar nuevo
+      <button onclick="cerrarModalNuevoLugar()" style="width:28px;height:28px;border-radius:6px;background:#f1f5f9;border:none;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nombre (consorcio o dirección)</label>
+      <input type="text" class="form-input" id="input-nuevo-lugar" placeholder="Ej: Consorcio Av. Colón 123">
+    </div>
+    <button class="btn-primary" onclick="confirmarNuevoLugar()">Guardar</button>
   </div>
 </div>
 
@@ -1521,17 +1536,28 @@ function renderObras() {
     const proc = temas.filter(t=>t.estado==='En proceso').length;
     const res = temas.filter(t=>t.estado==='Resuelto').length;
     const catMap = {Presupuesto:'cat-presupuesto','A realizar':'cat-realizar','Pendiente':'cat-pendiente','Estado':'cat-estado','Seguimiento':'cat-seguimiento'};
-    const temasHtml = temas.map((t,ti) => `
+    const ramaColor = {'Adm. Propiedades':'background:#dbeafe;color:#1e40af','Adm. Consorcios':'background:#ede9fe;color:#5b21b6'};
+    const temasHtml = temas.map((t,ti) => {
+      const rStyle = ramaColor[t.rama] || 'background:#f1f5f9;color:#64748b';
+      const lugarTxt = t.lugar ? `<span style="font-size:11px;color:#475569;font-weight:500">📍 ${t.lugar}</span>` : '';
+      const personalTxt = t.personal ? `<span style="font-size:11px;color:#475569">👤 ${t.personal}</span>` : '';
+      return `
       <div class="tema-row" id="tema-${a.id}-${ti}">
-        <span class="tema-cat-badge ${catMap[t.categoria]||''}">${t.categoria}</span>
-        <span class="tema-texto">${t.texto}</span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;white-space:nowrap;${rStyle}">${t.rama||''}</span>
+            ${lugarTxt}
+            ${personalTxt}
+          </div>
+          <div class="tema-texto">${t.detalle||t.texto||''}</div>
+        </div>
         <div class="tema-estado-btns">
-          <button class="tema-est-btn ${t.estado==='Pendiente'?'est-activo-pend':''}" onclick="cambiarEstadoTema('${a.id}',${ti},'Pendiente')">⏳ Pendiente</button>
-          <button class="tema-est-btn ${t.estado==='En proceso'?'est-activo-proc':''}" onclick="cambiarEstadoTema('${a.id}',${ti},'En proceso')">▶ En proceso</button>
+          <button class="tema-est-btn ${t.estado==='Pendiente'?'est-activo-pend':''}" onclick="cambiarEstadoTema('${a.id}',${ti},'Pendiente')">⏳ Pend.</button>
+          <button class="tema-est-btn ${t.estado==='En proceso'?'est-activo-proc':''}" onclick="cambiarEstadoTema('${a.id}',${ti},'En proceso')">▶ En proc.</button>
           <button class="tema-est-btn ${t.estado==='Resuelto'?'est-activo-res':''}" onclick="cambiarEstadoTema('${a.id}',${ti},'Resuelto')">✓ Resuelto</button>
         </div>
         <button class="tema-del-btn" onclick="eliminarTema('${a.id}',${ti})" title="Eliminar tema">×</button>
-      </div>`).join('');
+      </div>`}).join('');
     const notasHtml = a.notas ? `<div class="acta-notas"><div class="acta-notas-label">📝 Notas</div>${a.notas}</div>` : '';
     const esHoy = a.fecha === new Date().toISOString().split('T')[0];
     return `<div class="acta-card">
@@ -1602,14 +1628,12 @@ window.eliminarActa = async function(actaId) {
 // MODAL ACTA
 window.abrirModalActa = function() {
   actaTipoActual = 'Martes';
-  // Set fecha a hoy
   document.getElementById('acta-fecha').value = new Date().toISOString().split('T')[0];
-  // Reset tipo buttons
   setActaTipo('Martes');
-  // Reset temas form con 3 filas vacías
   const form = document.getElementById('acta-temas-form');
   form.innerHTML = '';
-  addTemaForm(); addTemaForm(); addTemaForm();
+  temaFormCounter = 0;
+  addTemaForm();
   document.getElementById('acta-notas').value = '';
   document.getElementById('modal-acta-overlay').classList.add('open');
 };
@@ -1632,39 +1656,167 @@ window.setActaTipo = function(tipo) {
   }
 };
 
+// ─── LUGARES (consorcios/propiedades) guardados en Firebase ─────────────────
+let lugaresGuardados = [];
+let _selectLugarActivo = null; // referencia al select que disparó el modal
+
+onSnapshot(collection(db,'obras_lugares'), snap => {
+  lugaresGuardados = snap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  // Refrescar todos los selects de lugar que estén en el DOM
+  document.querySelectorAll('.select-lugar').forEach(sel => {
+    const rama = sel.closest('.tema-form-bloque')?.querySelector('.select-rama')?.value || '';
+    refrescarSelectLugar(sel, rama, sel.value);
+  });
+});
+
+function refrescarSelectLugar(sel, rama, valorActual) {
+  const filtrados = rama ? lugaresGuardados.filter(l => l.rama === rama) : lugaresGuardados;
+  const opts = filtrados.map(l => `<option value="${l.nombre}" ${l.nombre===valorActual?'selected':''}>${l.nombre}</option>`).join('');
+  sel.innerHTML = `<option value="">Seleccionar...</option>${opts}<option value="__nuevo__">＋ Agregar nuevo...</option>`;
+  if(valorActual) sel.value = valorActual;
+}
+
+window.cerrarModalNuevoLugar = function() {
+  document.getElementById('modal-nuevo-lugar').style.display = 'none';
+  _selectLugarActivo = null;
+};
+
+window.confirmarNuevoLugar = async function() {
+  const nombre = document.getElementById('input-nuevo-lugar').value.trim();
+  if(!nombre) return;
+  const rama = _selectLugarActivo?.closest('.tema-form-bloque')?.querySelector('.select-rama')?.value || '';
+  // Guardar en Firebase
+  const docRef = await addDoc(collection(db,'obras_lugares'), { nombre, rama, createdAt: new Date().toISOString() });
+  // Seleccionar en el select activo
+  if(_selectLugarActivo) {
+    refrescarSelectLugar(_selectLugarActivo, rama, nombre);
+    _selectLugarActivo.value = nombre;
+  }
+  document.getElementById('modal-nuevo-lugar').style.display = 'none';
+  _selectLugarActivo = null;
+  document.getElementById('input-nuevo-lugar').value = '';
+};
+
+window.onRamaChange = function(sel) {
+  const bloque = sel.closest('.tema-form-bloque');
+  const selLugar = bloque.querySelector('.select-lugar');
+  refrescarSelectLugar(selLugar, sel.value, '');
+};
+
+window.onLugarChange = function(sel) {
+  if(sel.value === '__nuevo__') {
+    sel.value = '';
+    _selectLugarActivo = sel;
+    document.getElementById('input-nuevo-lugar').value = '';
+    document.getElementById('modal-nuevo-lugar').style.display = 'flex';
+    setTimeout(() => document.getElementById('input-nuevo-lugar').focus(), 100);
+  }
+};
+
+// ─── FORM DE TEMAS ───────────────────────────────────────────────────────────
 let temaFormCounter = 0;
+
 window.addTemaForm = function() {
   const id = 'tf-' + (++temaFormCounter);
   const div = document.createElement('div');
-  div.className = 'tema-form-row';
+  div.className = 'tema-form-bloque';
   div.id = id;
+  div.style.cssText = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:10px;position:relative';
   div.innerHTML = `
-    <select class="tema-form-cat">
-      <option value="Presupuesto">💰 Presupuesto</option>
-      <option value="A realizar">🔨 A realizar</option>
-      <option value="Pendiente">⏳ Pendiente</option>
-      <option value="Estado">📊 Estado</option>
-      <option value="Seguimiento">🔍 Seguimiento</option>
-    </select>
-    <textarea class="tema-form-txt" placeholder="Descripción del tema..." rows="1"></textarea>
-    <button class="tema-form-del" onclick="document.getElementById('${id}').remove()" title="Quitar">×</button>`;
+    <button onclick="document.getElementById('${id}').remove()" title="Quitar" style="position:absolute;top:10px;right:10px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:4px" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#94a3b8'">×</button>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">Rama *</div>
+        <select class="form-select select-rama" onchange="onRamaChange(this)" style="font-size:12px">
+          <option value="">Seleccionar...</option>
+          <option value="Adm. Propiedades">Adm. Propiedades</option>
+          <option value="Adm. Consorcios">Adm. Consorcios</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">Consorcio / Propiedad *</div>
+        <select class="form-select select-lugar" onchange="onLugarChange(this)" style="font-size:12px">
+          <option value="">Seleccionar rama primero...</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">Detalle de la obra *</div>
+      <textarea class="form-textarea tema-detalle" rows="2" placeholder="Describí la obra, reparación o tema a tratar..." style="font-size:13px;resize:none"></textarea>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">Personal a cargo</div>
+        <select class="form-select select-personal" onchange="onPersonalChange(this,'${id}')" style="font-size:12px">
+          <option value="">Sin asignar</option>
+          <option value="Hugo">Hugo</option>
+          <option value="Mariano">Mariano</option>
+          <option value="Martín">Martín</option>
+          <option value="Miguel">Miguel</option>
+          <option value="__otro__">✏️ Escribir nombre...</option>
+        </select>
+        <input type="text" class="form-input personal-custom" id="personal-custom-${id}" placeholder="Nombre del proveedor..." style="font-size:12px;margin-top:6px;display:none">
+      </div>
+      <div>
+        <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">Estado</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
+          <button class="tema-est-btn est-activo-pend estado-btn" data-estado="Pendiente" onclick="setEstadoTemaForm(this,'${id}')">⏳ Pendiente</button>
+          <button class="tema-est-btn estado-btn" data-estado="En proceso" onclick="setEstadoTemaForm(this,'${id}')">▶ En proceso</button>
+          <button class="tema-est-btn estado-btn" data-estado="Resuelto" onclick="setEstadoTemaForm(this,'${id}')">✓ Resuelto</button>
+        </div>
+      </div>
+    </div>`;
   document.getElementById('acta-temas-form').appendChild(div);
-  // Auto-resize textarea
-  const ta = div.querySelector('textarea');
-  ta.addEventListener('input', () => { ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; });
+};
+
+window.onPersonalChange = function(sel, bloqueId) {
+  const custom = document.getElementById('personal-custom-'+bloqueId);
+  if(sel.value === '__otro__') {
+    sel.value = '';
+    custom.style.display = 'block';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+  }
+};
+
+window.setEstadoTemaForm = function(btn, bloqueId) {
+  const bloque = document.getElementById(bloqueId);
+  bloque.querySelectorAll('.estado-btn').forEach(b => {
+    b.classList.remove('est-activo-pend','est-activo-proc','est-activo-res');
+  });
+  const estado = btn.dataset.estado;
+  if(estado==='Pendiente') btn.classList.add('est-activo-pend');
+  else if(estado==='En proceso') btn.classList.add('est-activo-proc');
+  else if(estado==='Resuelto') btn.classList.add('est-activo-res');
 };
 
 window.guardarActa = async function() {
   const fecha = document.getElementById('acta-fecha').value;
   if(!fecha) { alert('Seleccioná la fecha de la reunión'); return; }
-  const filas = document.querySelectorAll('#acta-temas-form .tema-form-row');
+  const bloques = document.querySelectorAll('#acta-temas-form .tema-form-bloque');
   const temas = [];
-  filas.forEach(fila => {
-    const cat = fila.querySelector('select').value;
-    const txt = fila.querySelector('textarea').value.trim();
-    if(txt) temas.push({ categoria: cat, texto: txt, estado: 'Pendiente' });
+  let hayError = false;
+  bloques.forEach(bloque => {
+    const rama = bloque.querySelector('.select-rama').value;
+    const lugar = bloque.querySelector('.select-lugar').value;
+    const detalle = bloque.querySelector('.tema-detalle').value.trim();
+    if(!detalle) return; // skip vacíos
+    if(!rama) { hayError = true; return; }
+    const selPersonal = bloque.querySelector('.select-personal');
+    const customInput = bloque.querySelector('.personal-custom');
+    const personal = customInput.style.display !== 'none' && customInput.value.trim()
+      ? customInput.value.trim()
+      : (selPersonal.value && selPersonal.value !== '__otro__' ? selPersonal.value : '');
+    const estadoBtn = bloque.querySelector('.estado-btn.est-activo-pend, .estado-btn.est-activo-proc, .estado-btn.est-activo-res');
+    const estado = estadoBtn ? estadoBtn.dataset.estado : 'Pendiente';
+    temas.push({ rama, lugar, detalle, personal, estado });
   });
-  if(!temas.length) { alert('Agregá al menos un tema'); return; }
+  if(hayError) { alert('Seleccioná la rama en todos los temas'); return; }
+  if(!temas.length) { alert('Agregá al menos un tema con detalle'); return; }
   const notas = document.getElementById('acta-notas').value.trim();
   try {
     await addDoc(collection(db,'obras_reuniones'), {
