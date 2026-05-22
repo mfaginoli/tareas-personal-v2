@@ -1152,12 +1152,16 @@ function renderDashboard() {
   document.getElementById('k-cnt-fin').textContent = finalizadas.length;
   document.getElementById('k-fin').innerHTML = finalizadas.slice(0,5).map(t=>kCard(t,true)).join('')||(finalizadas.length===0?'<div style="font-size:12px;color:#94a3b8;text-align:center;padding:12px">Sin finalizadas</div>':'');
 
-  // Kanban click delegation
-  document.querySelectorAll('#k-pend, #k-proc, #k-fin').forEach(col => {
-    col.addEventListener('click', function handler(e) {
-      const card = e.target.closest('[data-id]');
-      if(card) openDrawer(card.getAttribute('data-id'));
-    }, {once: false});
+  // Kanban click delegation — usar atributo para evitar listeners duplicados
+  ['k-pend','k-proc','k-fin'].forEach(colId => {
+    const col = document.getElementById(colId);
+    if(col && !col.dataset.listenerAdded) {
+      col.dataset.listenerAdded = '1';
+      col.addEventListener('click', function(e) {
+        const card = e.target.closest('[data-id]');
+        if(card) openDrawer(card.getAttribute('data-id'));
+      });
+    }
   });
 
   // Por área
@@ -1175,7 +1179,7 @@ function renderDashboard() {
   }).join('');
 
   // Por colaborador
-  const colabs = ['Yo (Matias)','Martín','Lucas','Mariano','Hugo','Proveedor'];
+  const colabs = ['Yo (Matias)','Martín','Lucas','Mariano','Hugo','Miguel','Proveedor'];
   const cobData = colabs.map(c=>({n:c,total:activas.filter(t=>t.derivado===c).length,urg:activas.filter(t=>t.derivado===c&&t.caracter==='Urgente').length,venc:activas.filter(t=>t.derivado===c&&t.fecha&&t.fecha<h).length})).filter(c=>c.total>0);
   document.getElementById('d-colabs').innerHTML = cobData.length ? cobData.map(c=>`
     <div class="colab-row" onclick="goView('delegadas',document.getElementById('nav-delegadas'));document.getElementById('filter-persona').value='${c.n}';renderList()">
@@ -1542,6 +1546,7 @@ function renderObras() {
     const pend = temas.filter(t=>t.estado==='Pendiente').length;
     const proc = temas.filter(t=>t.estado==='En proceso').length;
     const res = temas.filter(t=>t.estado==='Resuelto').length;
+    const pres = temas.filter(t=>t.estado==='Presupuesto').length;
     const catMap = {Presupuesto:'cat-presupuesto','A realizar':'cat-realizar','Pendiente':'cat-pendiente','Estado':'cat-estado','Seguimiento':'cat-seguimiento'};
     const ramaColor = {'Adm. Propiedades':'background:#dbeafe;color:#1e40af','Adm. Consorcios':'background:#ede9fe;color:#5b21b6'};
     const temasHtml = temas.map((t,ti) => {
@@ -1573,9 +1578,10 @@ function renderObras() {
         <div class="acta-head-left">
           <span class="acta-tipo-badge ${a.tipo==='Martes'?'acta-mar':'acta-jue'}">${a.tipo}</span>
           <span class="acta-fecha">${nomDia(a.fecha)} ${fmt2(a.fecha)}${esHoy?' <span style="font-size:11px;color:#0891b2;font-weight:400">· hoy</span>':''}</span>
-          <span class="acta-cnt">${temas.length} tema${temas.length!==1?'s':''} · <span style="color:#dc2626">${pend} pend.</span> · <span style="color:#1d4ed8">${proc} en proceso</span> · <span style="color:#16a34a">${res} resuelto${res!==1?'s':''}</span></span>
+          <span class="acta-cnt">${temas.length} tema${temas.length!==1?'s':''} · <span style="color:#dc2626">${pend} pend.</span> · <span style="color:#1d4ed8">${proc} en proc.</span> · <span style="color:#d97706">${pres} presup.</span> · <span style="color:#16a34a">${res} resuelto${res!==1?'s':''}</span></span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="event.stopPropagation();abrirEditarActa('${a.id}')" style="font-size:11px;color:#0891b2;cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid #bae6fd;background:#f0f9ff;font-family:inherit">✏️ Editar</button>
           <button onclick="event.stopPropagation();eliminarActa('${a.id}')" style="font-size:11px;color:#94a3b8;cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid #e2e8f0;background:#f8fafc;font-family:inherit">Eliminar</button>
           <span class="acta-chevron ${idx===0?'open':''}">▾</span>
         </div>
@@ -1633,8 +1639,70 @@ window.eliminarActa = async function(actaId) {
   await deleteDoc(doc(db,'obras_reuniones',actaId));
 };
 
+// Abrir modal en modo edición
+let editActaId = null;
+window.abrirEditarActa = function(actaId) {
+  const acta = actas.find(a => a.id === actaId);
+  if(!acta) return;
+  editActaId = actaId;
+
+  // Cambiar título del modal
+  document.querySelector('#modal-acta-overlay .modal-title').childNodes[0].textContent = '✏️ Editar acta de reunión ';
+
+  // Fecha y tipo
+  document.getElementById('acta-fecha').value = acta.fecha || '';
+  setActaTipo(acta.tipo || 'Martes');
+
+  // Reconstruir temas
+  const form = document.getElementById('acta-temas-form');
+  form.innerHTML = '';
+  temaFormCounter = 0;
+  (acta.temas || []).forEach(t => {
+    addTemaForm();
+    const bloque = form.lastElementChild;
+    // Rama
+    const selRama = bloque.querySelector('.select-rama');
+    selRama.value = t.rama || '';
+    // Lugar — refrescar opciones y setear valor
+    const selLugar = bloque.querySelector('.select-lugar');
+    refrescarSelectLugar(selLugar, t.rama || '', t.lugar || '');
+    // Detalle
+    bloque.querySelector('.tema-detalle').value = t.detalle || t.texto || '';
+    // Personal
+    const selPersonal = bloque.querySelector('.select-personal');
+    const customInput = bloque.querySelector('[id^="personal-custom-"]');
+    const bloqueId = bloque.id;
+    const personalFijo = ['Hugo','Mariano','Martín','Miguel'];
+    if(t.personal && personalFijo.includes(t.personal)) {
+      selPersonal.value = t.personal;
+      customInput.style.display = 'none';
+    } else if(t.personal) {
+      selPersonal.value = '__otro__';
+      customInput.style.display = 'block';
+      customInput.value = t.personal;
+    }
+    // Estado
+    bloque.querySelectorAll('.estado-btn').forEach(b => {
+      b.classList.remove('est-activo-pend','est-activo-proc','est-activo-res','est-activo-pres');
+    });
+    const estadoMap = {Pendiente:'est-activo-pend','En proceso':'est-activo-proc',Presupuesto:'est-activo-pres',Resuelto:'est-activo-res'};
+    const targetBtn = bloque.querySelector(`.estado-btn[data-estado="${t.estado||'Pendiente'}"]`);
+    if(targetBtn) targetBtn.classList.add(estadoMap[t.estado||'Pendiente']);
+  });
+
+  // Notas
+  document.getElementById('acta-notas').value = acta.notas || '';
+
+  // Cambiar botón guardar a "Guardar cambios"
+  const btnGuardar = document.querySelector('#modal-acta-overlay .btn-primary');
+  btnGuardar.textContent = 'Guardar cambios';
+
+  document.getElementById('modal-acta-overlay').classList.add('open');
+};
+
 // MODAL ACTA
 window.abrirModalActa = function() {
+  editActaId = null;
   actaTipoActual = 'Martes';
   document.getElementById('acta-fecha').value = new Date().toISOString().split('T')[0];
   setActaTipo('Martes');
@@ -1643,6 +1711,9 @@ window.abrirModalActa = function() {
   temaFormCounter = 0;
   addTemaForm();
   document.getElementById('acta-notas').value = '';
+  // Restaurar título y botón
+  document.querySelector('#modal-acta-overlay .modal-title').childNodes[0].textContent = '📋 Nueva acta de reunión ';
+  document.querySelector('#modal-acta-overlay .btn-primary').textContent = 'Guardar acta';
   document.getElementById('modal-acta-overlay').classList.add('open');
 };
 
@@ -1814,28 +1885,28 @@ window.guardarActa = async function() {
     const rama = bloque.querySelector('.select-rama').value;
     const lugar = bloque.querySelector('.select-lugar').value;
     const detalle = bloque.querySelector('.tema-detalle').value.trim();
-    if(!detalle) return; // skip vacíos
+    if(!detalle) return;
     if(!rama) { hayError = true; return; }
     const selPersonal = bloque.querySelector('.select-personal');
     const customInput = bloque.querySelector('.personal-custom');
     const personal = customInput.style.display !== 'none' && customInput.value.trim()
       ? customInput.value.trim()
       : (selPersonal.value && selPersonal.value !== '__otro__' ? selPersonal.value : '');
-    const estadoBtn = bloque.querySelector('.estado-btn.est-activo-pend, .estado-btn.est-activo-proc, .estado-btn.est-activo-res');
+    const estadoBtn = bloque.querySelector('.estado-btn.est-activo-pend, .estado-btn.est-activo-proc, .estado-btn.est-activo-res, .estado-btn.est-activo-pres');
     const estado = estadoBtn ? estadoBtn.dataset.estado : 'Pendiente';
     temas.push({ rama, lugar, detalle, personal, estado });
   });
   if(hayError) { alert('Seleccioná la rama en todos los temas'); return; }
   if(!temas.length) { alert('Agregá al menos un tema con detalle'); return; }
   const notas = document.getElementById('acta-notas').value.trim();
+  const payload = { tipo: actaTipoActual, fecha, temas, notas, updatedAt: new Date().toISOString() };
   try {
-    await addDoc(collection(db,'obras_reuniones'), {
-      tipo: actaTipoActual,
-      fecha,
-      temas,
-      notas,
-      createdAt: new Date().toISOString()
-    });
+    if(editActaId) {
+      await updateDoc(doc(db,'obras_reuniones', editActaId), payload);
+    } else {
+      await addDoc(collection(db,'obras_reuniones'), { ...payload, createdAt: new Date().toISOString() });
+    }
+    editActaId = null;
     document.getElementById('modal-acta-overlay').classList.remove('open');
   } catch(e) { alert('Error al guardar: '+e.message); }
 };
