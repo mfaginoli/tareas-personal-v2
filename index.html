@@ -1741,10 +1741,11 @@ let _selectLugarActivo = null; // referencia al select que disparó el modal
 
 onSnapshot(collection(db,'obras_lugares'), snap => {
   lugaresGuardados = snap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  // Refrescar todos los selects de lugar que estén en el DOM
+  // Refrescar selects pero preservar el valor actual seleccionado
   document.querySelectorAll('.select-lugar').forEach(sel => {
     const rama = sel.closest('.tema-form-bloque')?.querySelector('.select-rama')?.value || '';
-    refrescarSelectLugar(sel, rama, sel.value);
+    const valorActual = sel.value && sel.value !== '__nuevo__' ? sel.value : '';
+    refrescarSelectLugar(sel, rama, valorActual);
   });
 });
 
@@ -1762,18 +1763,32 @@ window.cerrarModalNuevoLugar = function() {
 
 window.confirmarNuevoLugar = async function() {
   const nombre = document.getElementById('input-nuevo-lugar').value.trim();
-  if(!nombre) return;
-  const rama = _selectLugarActivo?.closest('.tema-form-bloque')?.querySelector('.select-rama')?.value || '';
-  // Guardar en Firebase
-  const docRef = await addDoc(collection(db,'obras_lugares'), { nombre, rama, createdAt: new Date().toISOString() });
-  // Seleccionar en el select activo
-  if(_selectLugarActivo) {
-    refrescarSelectLugar(_selectLugarActivo, rama, nombre);
-    _selectLugarActivo.value = nombre;
-  }
+  if(!nombre) { alert('Escribí un nombre'); return; }
+
+  // Capturar referencias locales ANTES de cualquier await
+  const selectCapturado = _selectLugarActivo;
+  const rama = selectCapturado?.closest('.tema-form-bloque')?.querySelector('.select-rama')?.value || '';
+
+  // Cerrar modal inmediatamente para evitar doble click
   document.getElementById('modal-nuevo-lugar').style.display = 'none';
-  _selectLugarActivo = null;
   document.getElementById('input-nuevo-lugar').value = '';
+  _selectLugarActivo = null;
+
+  try {
+    await addDoc(collection(db,'obras_lugares'), { nombre, rama, createdAt: new Date().toISOString() });
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+    return;
+  }
+
+  // Setear el valor en el select luego de que Firebase actualice la lista local
+  // Usamos un pequeño delay para que el onSnapshot ya haya refrescado las opciones
+  setTimeout(() => {
+    if(selectCapturado) {
+      refrescarSelectLugar(selectCapturado, rama, nombre);
+      selectCapturado.value = nombre;
+    }
+  }, 400);
 };
 
 window.onRamaChange = function(sel) {
