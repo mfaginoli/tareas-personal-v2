@@ -236,10 +236,44 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
 .tema-form-del:hover{color:#dc2626}
 .btn-add-tema{width:100%;padding:8px;border-radius:8px;border:1.5px dashed #e2e8f0;background:#fff;color:#64748b;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px;transition:all 0.15s}
 .btn-add-tema:hover{border-color:#0891b2;color:#0891b2;background:#f0f9ff}
+
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+.login-card{background:#fff;border-radius:20px;padding:48px 40px;text-align:center;max-width:380px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.3)}
+.login-logo{font-size:40px;margin-bottom:10px}
+.login-title{font-size:22px;font-weight:700;color:#0f172a;margin-bottom:6px}
+.login-sub{font-size:13px;color:#94a3b8;margin-bottom:32px;line-height:1.5}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 20px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;color:#0f172a;font-size:14px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s}
+.btn-google:hover{background:#f8fafc;border-color:#cbd5e1;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.btn-google img{width:18px;height:18px}
+.login-error{font-size:12px;color:#dc2626;min-height:18px;margin-top:10px}
+.login-footer{font-size:11px;color:#cbd5e1;margin-top:20px}
+.user-badge{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:20px;background:rgba(255,255,255,0.12);cursor:default}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3)}
+.user-avatar-ph{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:600}
+.user-name{font-size:12px;color:rgba(255,255,255,0.85);font-weight:500;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-logout{font-size:11px;color:rgba(255,255,255,0.5);background:none;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;padding:2px 7px;font-family:inherit;transition:all 0.15s}
+.btn-logout:hover{color:#fff;border-color:rgba(255,255,255,0.5)}
 </style>
 </head>
 <body>
-<div class="app">
+<!-- PANTALLA DE LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🏢</div>
+    <div class="login-title">Ubix Personal</div>
+    <div class="login-sub">Gestión de tareas y seguimiento de obras.<br>Ingresá con tu cuenta de Google.</div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Continuar con Google
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-footer">Acceso restringido · Solo usuarios autorizados</div>
+  </div>
+</div>
+
+<!-- APP (oculta hasta autenticarse) -->
+<div class="app" id="app-main" style="display:none">
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -333,10 +367,16 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
 <div class="main">
   <div class="topbar">
     <div class="page-title" id="page-title">Dashboard</div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;align-items:center">
       <button class="btn-new" id="btn-hoy-dash" onclick="verHoy()" style="background:rgba(255,255,255,0.1)">📅 Hoy</button>
       <button class="btn-new" id="btn-gcal" onclick="conectarCalendar()" style="background:rgba(255,255,255,0.1)">📆 Calendar</button>
       <button class="btn-new" onclick="openModal()">+ Nueva tarea</button>
+      <div class="user-badge">
+        <div class="user-avatar-ph" id="user-avatar-ph">?</div>
+        <img class="user-avatar" id="user-avatar" src="" alt="" style="display:none">
+        <span class="user-name" id="user-name"></span>
+        <button class="btn-logout" onclick="logoutGoogle()">Salir</button>
+      </div>
     </div>
   </div>
   <div class="content">
@@ -778,6 +818,7 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyB20miV5Y0YHcUDTomcVpFDtd99tLv5aSE",
@@ -788,6 +829,8 @@ const app = initializeApp({
   appId: "1:659964421712:web:4321a08c35e2c9e9bbdcb7"
 });
 const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 let tareas = [];
 let currentView = 'dashboard';
@@ -1925,6 +1968,49 @@ window.guardarActa = async function() {
     document.getElementById('modal-acta-overlay').classList.remove('open');
   } catch(e) { alert('Error al guardar: '+e.message); }
 };
+
+// ─── AUTH GOOGLE ─────────────────────────────────────────────────────────────
+const EMAIL_AUTORIZADO = 'mfaginoli@gmail.com';
+
+window.loginGoogle = async function() {
+  document.getElementById('login-error').textContent = '';
+  try {
+    const result = await signInWithPopup(auth, provider);
+    if(result.user.email !== EMAIL_AUTORIZADO) {
+      await signOut(auth);
+      document.getElementById('login-error').textContent = '⚠️ Acceso no autorizado para ' + result.user.email;
+    }
+  } catch(e) {
+    if(e.code !== 'auth/popup-closed-by-user') {
+      document.getElementById('login-error').textContent = 'Error al iniciar sesión. Intentá de nuevo.';
+    }
+  }
+};
+
+window.logoutGoogle = async function() {
+  if(!confirm('¿Cerrar sesión?')) return;
+  await signOut(auth);
+};
+
+onAuthStateChanged(auth, (user) => {
+  if(user && user.email === EMAIL_AUTORIZADO) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-main').style.display = 'flex';
+    // Badge de usuario
+    const nombre = user.displayName ? user.displayName.split(' ')[0] : user.email.split('@')[0];
+    document.getElementById('user-name').textContent = nombre;
+    if(user.photoURL) {
+      document.getElementById('user-avatar').src = user.photoURL;
+      document.getElementById('user-avatar').style.display = 'block';
+      document.getElementById('user-avatar-ph').style.display = 'none';
+    } else {
+      document.getElementById('user-avatar-ph').textContent = nombre[0].toUpperCase();
+    }
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-main').style.display = 'none';
+  }
+});
 </script>
 </body>
 </html>
