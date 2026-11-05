@@ -323,6 +323,7 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
         <option>Lucas</option>
         <option>Mariano</option>
         <option>Hugo</option>
+        <option>Meli</option>
         <option>Proveedor</option>
       </select>
     </div>
@@ -364,6 +365,10 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
     <div class="nav-item" onclick="goArea('Eventos',this)">
       <div class="nav-dot" style="background:#f43f5e"></div>Eventos
       <span class="nav-cnt" id="cnt-Eventos">0</span>
+    </div>
+    <div class="nav-item" onclick="goArea('Generales',this)">
+      <div class="nav-dot" style="background:#6366f1"></div>Generales
+      <span class="nav-cnt" id="cnt-Generales">0</span>
     </div>
   </div>
   <div class="nav-section">
@@ -550,9 +555,9 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
           <button class="obras-filter-btn active" id="ofb-todas" onclick="filtrarObrasCategoria(null,this)">Todas</button>
           <button class="obras-filter-btn" id="ofb-obras" onclick="filtrarObrasCategoria(null,this,'Obras')">🏗 Obras</button>
           <button class="obras-filter-btn" id="ofb-comercial" onclick="filtrarObrasCategoria(null,this,'Comercial')">💼 Comercial</button>
-          <button class="obras-filter-btn" id="ofb-interna" onclick="filtrarObrasCategoria(null,this,'Interna')">👥 Interna</button>
-          <button class="obras-filter-btn" id="ofb-cliente" onclick="filtrarObrasCategoria(null,this,'Cliente')">🤝 Cliente</button>
-          <button class="obras-filter-btn" id="ofb-ext" onclick="filtrarObrasCategoria(null,this,'Extraordinaria')">⭐ Extraord.</button>
+          <button class="obras-filter-btn" id="ofb-adm" onclick="filtrarObrasCategoria(null,this,'Administracion')">🏢 Adm.</button>
+          <button class="obras-filter-btn" id="ofb-interna" onclick="filtrarObrasCategoria(null,this,'Interna')">👥 Internas</button>
+          <button class="obras-filter-btn" id="ofb-cliente" onclick="filtrarObrasCategoria(null,this,'Cliente')">🤝 Clientes</button>
         </div>
       </div>
 
@@ -577,9 +582,11 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
         <select class="form-select" id="acta-tipo-select" onchange="setActaTipo(this.value)" style="margin-top:4px">
           <option value="Obras">🏗 Obras</option>
           <option value="Comercial">💼 Comercial</option>
+          <option value="Administracion">🏢 Administración</option>
           <option value="Interna">👥 Interna</option>
           <option value="Cliente">🤝 Cliente</option>
           <option value="Extraordinaria">⭐ Extraordinaria</option>
+
         </select>
       </div>
       <div class="form-group" style="margin-bottom:0">
@@ -691,6 +698,7 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
           <option>Ventas</option>
           <option>Personales</option>
           <option>Eventos</option>
+          <option>Generales</option>
         </select>
         <div id="subarea-group" style="display:none;margin-top:8px">
           <select class="form-select" id="f-subarea">
@@ -731,6 +739,7 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
         <option>Lucas</option>
         <option>Mariano</option>
         <option>Hugo</option>
+        <option>Meli</option>
         <option>Proveedor</option>
         <option>Otro</option>
       </select>
@@ -787,6 +796,7 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
         <option>Ventas</option>
         <option>Personales</option>
         <option>Eventos</option>
+        <option>Generales</option>
       </select>
       <div id="e-subarea-group" style="display:none;margin-top:8px">
         <select class="form-select" id="e-subarea">
@@ -831,6 +841,7 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
       <option>Lucas</option>
       <option>Mariano</option>
       <option>Hugo</option>
+      <option>Meli</option>
       <option>Proveedor</option>
       <option>Otro</option>
     </select>
@@ -906,7 +917,7 @@ function updateCounts() {
   document.getElementById('cnt-en-proceso').textContent = tareas.filter(t=>t.estado==='En proceso').length;
   document.getElementById('cnt-vencidas').textContent = activas.filter(t=>t.fecha&&t.fecha<h).length;
   document.getElementById('cnt-finalizadas').textContent = tareas.filter(t=>t.estado==='Finalizada').length;
-  ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales','Eventos'].forEach(a => {
+  ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales','Eventos','Generales'].forEach(a => {
     const el = document.getElementById('cnt-'+a);
     if(el) el.textContent = activas.filter(t=>t.area===a).length;
   });
@@ -1239,8 +1250,8 @@ function renderDashboard() {
   });
 
   // Por área
-  const areas = ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales','Eventos'];
-  const areaColors = {'Adm. Consorcios':'#8b5cf6','Adm. Propiedades':'#06b6d4','Alquileres':'#f59e0b','Ventas':'#10b981','Personales':'#ec4899','Eventos':'#f43f5e'};
+  const areas = ['Adm. Consorcios','Adm. Propiedades','Alquileres','Ventas','Personales','Eventos','Generales'];
+  const areaColors = {'Adm. Consorcios':'#8b5cf6','Adm. Propiedades':'#06b6d4','Alquileres':'#f59e0b','Ventas':'#10b981','Personales':'#ec4899','Eventos':'#f43f5e','Generales':'#6366f1'};
   const maxA = Math.max(...areas.map(a=>activas.filter(t=>t.area===a).length),1);
   document.getElementById('d-areas').innerHTML = areas.map(a=>{
     const cnt = activas.filter(t=>t.area===a).length;
@@ -1253,7 +1264,7 @@ function renderDashboard() {
   }).join('');
 
   // Por colaborador
-  const colabs = ['Yo (Matias)','Martín','Lucas','Mariano','Hugo','Miguel','Proveedor'];
+  const colabs = ['Yo (Matias)','Martín','Lucas','Mariano','Hugo','Meli','Miguel','Proveedor'];
   const cobData = colabs.map(c=>({n:c,total:activas.filter(t=>t.derivado===c).length,urg:activas.filter(t=>t.derivado===c&&t.caracter==='Urgente').length,venc:activas.filter(t=>t.derivado===c&&t.fecha&&t.fecha<h).length})).filter(c=>c.total>0);
   document.getElementById('d-colabs').innerHTML = cobData.length ? cobData.map(c=>`
     <div class="colab-row" onclick="goView('delegadas',document.getElementById('nav-delegadas'));document.getElementById('filter-persona').value='${c.n}';renderList()">
@@ -1671,7 +1682,7 @@ function renderObras() {
     const res = temas.filter(t=>t.estado==='Resuelto').length;
     const pres = temas.filter(t=>t.estado==='Presupuesto').length;
     const ramaColor = {'Adm. Propiedades':'background:#dbeafe;color:#1e40af','Adm. Consorcios':'background:#ede9fe;color:#5b21b6'};
-    const tipoClass = {Obras:'acta-obras',Comercial:'acta-comercial',Interna:'acta-interna',Cliente:'acta-cliente',Extraordinaria:'acta-ext',Martes:'acta-obras',Jueves:'acta-obras'}[a.tipo] || 'acta-ext';
+    const tipoClass = {Obras:'acta-obras',Comercial:'acta-comercial',Administracion:'acta-interna',Interna:'acta-interna',Cliente:'acta-cliente',Extraordinaria:'acta-ext',Martes:'acta-obras',Jueves:'acta-obras'}[a.tipo] || 'acta-ext';
     const temasHtml = temas.map((t,ti) => {
       const rStyle = ramaColor[t.rama] || 'background:#f1f5f9;color:#64748b';
       const lugarTxt = t.lugar ? `<span style="font-size:11px;color:#475569;font-weight:500">📍 ${t.lugar}</span>` : '';
