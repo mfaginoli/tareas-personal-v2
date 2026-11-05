@@ -22,8 +22,7 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
 .nav-item.active{background:#f0f9ff;color:#0891b2;border-left-color:#0891b2;font-weight:500}
 .nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .nav-cnt{margin-left:auto;font-size:11px;background:#f1f5f9;color:#64748b;padding:1px 6px;border-radius:10px}
-.persona-filter{padding:4px 16px 8px;display:none}
-.persona-filter select{width:100%;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-family:'Inter',sans-serif}
+.persona-filter{font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-family:'Inter',sans-serif}
 .sidebar-footer{padding:12px 16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;margin-top:auto}
 .sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;margin-right:4px}
 
@@ -315,18 +314,6 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
       <div class="nav-dot" style="background:#2563eb"></div>Delegadas
       <span class="nav-cnt" id="cnt-delegadas">0</span>
     </div>
-    <div class="persona-filter" id="persona-filter">
-      <select id="filter-persona" onchange="render()">
-        <option value="">Todas las personas</option>
-        <option>Yo (Matias)</option>
-        <option>Martín</option>
-        <option>Lucas</option>
-        <option>Mariano</option>
-        <option>Hugo</option>
-        <option>Meli</option>
-        <option>Proveedor</option>
-      </select>
-    </div>
     <div class="nav-item" id="nav-en-proceso" onclick="goView('en-proceso',this)">
       <div class="nav-dot" style="background:#0891b2"></div>En proceso
       <span class="nav-cnt" id="cnt-en-proceso">0</span>
@@ -481,6 +468,20 @@ body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:1
           <input type="date" id="dia-picker" style="position:absolute;opacity:0;width:1px;height:1px" onchange="pickerChange(this.value)">
         </div>
         <button class="fc" onclick="limpiarDia()">× Limpiar</button>
+        <div class="fsep"></div>
+        <select class="persona-filter" id="filter-persona" onchange="render()">
+          <option value="">👤 Delegada a: todos</option>
+          <option value="sin-derivar">Sin delegar</option>
+          <option>Yo (Matias)</option>
+          <option>Martín</option>
+          <option>Lucas</option>
+          <option>Mariano</option>
+          <option>Hugo</option>
+          <option>Meli</option>
+          <option>Miguel</option>
+          <option>Proveedor</option>
+          <option>Otro</option>
+        </select>
       </div>
       <div id="task-list"></div>
     </div>
@@ -1072,8 +1073,7 @@ window.goView = function(view, el) {
   currentArea = null;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el) el.classList.add('active');
-  document.getElementById('persona-filter').style.display = view==='delegadas'?'block':'none';
-  if(view!=='delegadas') document.getElementById('filter-persona').value='';
+  document.getElementById('filter-persona').value='';
   // Reset filters when changing view
   currentCaract = 'todas';
   currentEstado = 'todas-e';
@@ -1091,7 +1091,6 @@ window.goArea = function(area, el) {
   currentArea = area;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el) el.classList.add('active');
-  document.getElementById('persona-filter').style.display='none';
   document.getElementById('page-title').textContent = area;
   showView('list');
 };
@@ -1124,8 +1123,6 @@ function getFiltered() {
     f = f.filter(t=>t.caracter==='Moderado'&&t.estado!=='Finalizada');
   } else if(currentView==='delegadas') {
     f = f.filter(t=>t.derivado&&t.estado!=='Finalizada');
-    const p = document.getElementById('filter-persona').value;
-    if(p) f = f.filter(t=>t.derivado===p);
   } else if(currentView==='en-proceso') {
     f = f.filter(t=>t.estado==='En proceso');
   } else if(currentView==='vencidas') {
@@ -1137,6 +1134,9 @@ function getFiltered() {
   } else {
     f = f.filter(t=>t.estado!=='Finalizada');
   }
+  const p = document.getElementById('filter-persona').value;
+  if(p==='sin-derivar') f = f.filter(t=>!t.derivado);
+  else if(p) f = f.filter(t=>t.derivado===p);
   if(currentCaract!=='todas') f = f.filter(t=>t.caracter===currentCaract);
   if(currentEstado!=='todas-e'&&currentView!=='finalizadas'&&currentView!=='en-proceso') {
     f = f.filter(t=>t.estado===currentEstado);
@@ -1267,7 +1267,7 @@ function renderDashboard() {
   const colabs = ['Yo (Matias)','Martín','Lucas','Mariano','Hugo','Meli','Miguel','Proveedor'];
   const cobData = colabs.map(c=>({n:c,total:activas.filter(t=>t.derivado===c).length,urg:activas.filter(t=>t.derivado===c&&t.caracter==='Urgente').length,venc:activas.filter(t=>t.derivado===c&&t.fecha&&t.fecha<h).length})).filter(c=>c.total>0);
   document.getElementById('d-colabs').innerHTML = cobData.length ? cobData.map(c=>`
-    <div class="colab-row" onclick="goView('delegadas',document.getElementById('nav-delegadas'));document.getElementById('filter-persona').value='${c.n}';renderList()">
+    <div class="colab-row" onclick="goView('delegadas',document.getElementById('nav-delegadas'));document.getElementById('filter-persona').value='${c.n}';render()">
       <div><div class="colab-name">${c.n}</div><div class="colab-sub">${c.total} tarea${c.total>1?'s':''}${c.venc>0?' · '+c.venc+' vencida':''}</div></div>
       <div class="pills">${c.urg>0?`<span class="pill pill-red">${c.urg} urg</span>`:''}<span class="pill pill-blue">${c.total}</span></div>
     </div>`).join('') : '<div style="font-size:12px;color:#94a3b8;text-align:center;padding:16px">Sin tareas derivadas</div>';
@@ -1577,7 +1577,6 @@ function _mostrarVistaReuniones(el, modo, titulo) {
   obrasFilterTipo = null;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el) el.classList.add('active');
-  document.getElementById('persona-filter').style.display = 'none';
   document.getElementById('page-title').textContent = titulo;
   document.getElementById('btn-hoy-dash').style.display = 'none';
   document.getElementById('view-dashboard').style.display = 'none';
